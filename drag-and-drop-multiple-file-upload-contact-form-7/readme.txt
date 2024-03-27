@@ -1,10 +1,10 @@
 === Drag and Drop Multiple File Upload - Contact Form 7 ===
 Contributors: glenwpcoder, yordansoares
 Donate link : http://codedropz.com/donation
-Tags: drag and drop, contact form 7, ajax uploader, multiple file, upload, contact form 7 uploader
+Tags: drag and drop, contact form 7, ajax uploader, multiple file, upload
 Requires at least: 3.0.1
 Tested up to: 6.4
-Stable tag: 1.3.7.4
+Stable tag: 1.3.7.6
 Requires PHP: 5.2.4
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
@@ -35,17 +35,19 @@ Here's a little [DEMO](http://codedropz.com/contact).
 
 **Note:** On Free version, all uploaded files moves to a temporary folder *("/wp-content/uploads/wp_dndcf7_uploads")* then attaches the file to the mail and sends it. After that **"Drag & Drop File Upload"** removes the file from the temporary folder **1 hour** after the submission. *( same process with the default **"file"** upload of Contact Form 7 - [See here](https://contactform7.com/file-uploading-and-attachment/#How-your-uploaded-files-are-managed) )*
 
+To **adjust** or **disable** the auto-deletion feature, we suggest upgrading to the **PRO version** for more options *(see below)*.
+
 ### ⭐ Premium Features ⭐
 
 Check out the available features in the **PRO version**.
 
-* Image Preview - Show Thumbnail for images
-* Adjust Auto Deletion of Files - After Form Submission
+* **Image Preview** - Show Thumbnail for images
+* Adjust **Auto Deletion** of Files - After Form Submission
   - *(1 hour, 4 hours, 8 hours , days, months etc)*
 * Zip Files ( Compressed File )
-* Save Files to "Wordpress Media Library"
+* Save Files to **"Wordpress Media Library"**
 * Change Wordpress Upload Directory
-* Change Upload Folder To:
+* Change **Upload Folder** To:
   - Contact Form 7 - Fields
   - Generated Date & Time - Timestamp
   - Random Folder
@@ -63,8 +65,8 @@ Check out the available features in the **PRO version**.
 * **New** - Disabled the Button to Prevent Duplicate Submissions"
 * **New** - Image preview on email
 * **New** - File Remote Storage *(Google Drive, Amazon S3, FTP, Dropbox)*
-* **New** - Save **Form Entries** in the Admin 
-* **New** - Select "Dark" or "Light" Theme 
+* **New** - Save **Form Entries** in the Admin
+* **New** - Select "Dark" or "Light" Theme
 * Able Resize Image (ie: 800x800) - **Standard** Version Only
 * Enhanced Security (Updated Regularly)
 * Code Optimization and Improved Performance
@@ -155,6 +157,14 @@ To install this plugin see below:
 6. Multiple Drag and Drop Fields - Front
 
 == Changelog ==
+
+= 1.3.7.6 =
+- Fixes - Removed inline css and use proper enqueue (https://wordpress.org/support/topic/html-validation-error-21/)
+- Minor bug fixes and improvements
+-
+
+= 1.3.7.5 =
+- Fixes - Fixed JS error for custom button type submit.
 
 = 1.3.7.4 =
 - Fixes - Security Updates "Unauthenticated Arbitrary File Upload" (Thanks to @István from Wordfence)
