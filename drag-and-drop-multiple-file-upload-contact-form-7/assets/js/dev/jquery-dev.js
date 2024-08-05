@@ -1,8 +1,8 @@
 /**
- * CodeDropz Uploader v1.3.7.7
+ * CodeDropz Uploader
  * Copyright 2018 Glen Mongaya
  * CodeDrop Drag&Drop Uploader
- * @version 1.3.7.7
+ * @version 1.3.8.1
  * @author CodeDropz, Glen Don L. Mongaya
  * @license The MIT License (MIT)
  */
@@ -152,7 +152,7 @@
 					if( localStorage.getItem( dataStorageName ) > options.max_file ) {
 						if( ! $('span.has-error-msg', options_handler ).length > 0 ) {
 							err_msg = dnd_cf7_uploader.drag_n_drop_upload.max_file_limit;
-							options_handler.append('<span class="has-error-msg">'+ err_msg.replace('%count%', options.max_file ) +'</span>');
+							$('.codedropz-upload-handler', options_handler).next('<span class="has-error-msg">'+ err_msg.replace('%count%', options.max_file ) +'</span>');
 						}
 						return false;
 					}
