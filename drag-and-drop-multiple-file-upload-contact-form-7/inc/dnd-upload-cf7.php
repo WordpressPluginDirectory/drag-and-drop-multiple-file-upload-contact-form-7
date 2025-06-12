@@ -139,29 +139,37 @@
 		$page      = get_post( $post_id );
 
 		if ( $post_type == 'flamingo_inbound' ) {
-			preg_match_all( '/(.*?)(\/'.wpcf7_dnd_dir.'\/wpcf7-files\/.*$)/m', $page->post_content, $matches );
+			preg_match_all( '/https?:\/\/[^\'"\s]+\/'.preg_quote(wpcf7_dnd_dir, '/').'\/wpcf7-files\/[^\'"\s]+/i', $page->post_content, $matches );
+
 			if ( $matches[0] && count( $matches[0] ) > 0 ) {
-				foreach ( $matches[0] as $files ) {
+				foreach ( $matches[0] as $file_url ) {
 
 					// Convert url to dir
-					$file = str_replace( site_url() . '/', wp_normalize_path( ABSPATH ), $files );
+					$file = str_replace( site_url() . '/', wp_normalize_path( ABSPATH ), $file_url );
+
+					// Only allowed local paths. (skip: phar://, file://)
+					if ( parse_url( $file, PHP_URL_SCHEME ) ) {
+						continue;
+					}
 
 					// Check if it's a regular file.
-					if ( is_file( $file ) ) {
-
-						// Extract and sanitize the filename
-						$file_path = dirname( $file ) . '/' . sanitize_file_name( wp_basename( $file ) );
-
-						// Prevent traversal attack
-						$real_path   = realpath( $file_path );
-						$wp_dir      = wp_get_upload_dir(); //WordPress dir
-						$uploads_dir = wp_normalize_path( realpath( $wp_dir['basedir'] ). '/'. wpcf7_dnd_dir );
-
-						// Check if the file exists and is within the uploads directory
-						if ( $real_path && file_exists( $real_path ) && strpos( $real_path, $uploads_dir ) === 0 ) {
-							wp_delete_file( $real_path );
-						}
+					if ( ! file_exists( $file ) || ! is_file( $file ) ) {
+						continue;
 					}
+
+					// Extract and sanitize the filename
+					$file_path = dirname( $file ) . '/' . sanitize_file_name( wp_basename( $file ) );
+
+					// Prevent traversal attack
+					$real_path   = realpath( $file_path );
+					$wp_dir      = wp_get_upload_dir(); //WordPress dir
+					$uploads_dir = wp_normalize_path( realpath( $wp_dir['basedir'] ). '/'. wpcf7_dnd_dir );
+
+					// Check if the file exists and is within the uploads directory
+					if ( $real_path && file_exists( $real_path ) && strpos( $real_path, $uploads_dir ) === 0 ) {
+						wp_delete_file( $real_path );
+					}
+
 				}
 			}
 		}
@@ -428,6 +436,9 @@
 		// get all form fields
 		$fields = $form->scan_form_tags();
 
+		// Default counter
+		$_mail = isset( $_mail ) ? $_mail : 0;
+
 		// Display file links in email (no attachment)
 		if( dnd_cf7_settings('drag_n_drop_mail_attachment') == 'yes' ) {
 			return $components;
@@ -678,14 +689,21 @@
 		// Match pattern
 		preg_match_all( '/'. $regex .'/s', $cf7_post->post_content, $matches );
 
-		if( array_key_exists( 3, $matches )) {
-			foreach( $matches[3] as $index => $group_name ) {
-				$name = array_filter( explode(" ", $group_name ) );
-				preg_match('/\[mfile[*|\s].*?\]/', $matches[0][$index], $file_matches );
-				if( $file_matches ) {
-					$field_name = shortcode_parse_atts( $file_matches[0] );
-					$field_name = preg_replace( '/[^a-zA-Z0-9-_]/','', $field_name[1] );
-					$groups[ $field_name ] = $name[1];
+		if( array_key_exists( 0, $matches ) && isset( $matches[3] ) ) {
+			foreach( $matches[0] as $i => $groups_fields ) {
+				$group_name = shortcode_parse_atts( $matches[3][ $i ] ); // get group name [0]=group_name [1]=class_name
+				preg_match_all('/\[mfile[*|\s].*?\]/', $groups_fields, $file_matches );
+				if ( $file_matches && isset( $file_matches[0] ) ) {
+					foreach ( $file_matches[0] as $file_match ) {
+						$field_name = shortcode_parse_atts( $file_match );
+						if ( isset( $group_name[0] ) && isset( $field_name[1] ) ) {
+							if ( strpos( $field_name[1], ']' ) !== false ) {
+								$groups[ $group_name[0] ][] = str_replace( ']', '', $field_name[1] );
+							} else {
+								$groups[ $group_name[0] ][] = $field_name[1];
+							}
+						}
+					}
 				}
 			}
 		}
@@ -717,19 +735,19 @@
 		){
 
 			$hidden_groups = json_decode( stripslashes( $_POST['_wpcf7cf_hidden_groups'] ) );
-			$form_id = WPCF7_ContactForm::get_current()->id();
-			$group_fields = dnd_cf7_conditional_fields( $form_id );
+			$form_id       = WPCF7_ContactForm::get_current()->id();
+			$group_fields  = dnd_cf7_conditional_fields( $form_id );
 
-			if( is_null( $multiple_files ) && $tag->is_required() ) {
-				if( isset( $group_fields[ $name ] ) && ! in_array( $group_fields[ $name ], $hidden_groups ) ) {
-					$result->invalidate( $tag, wpcf7_get_message( 'invalid_required' ) );
-				}elseif( ! array_key_exists( $name, $group_fields ) ) {
-					$result->invalidate( $tag, wpcf7_get_message( 'invalid_required' ) );
+			if ( is_null( $multiple_files ) && $tag->is_required() && $group_fields ) {
+				foreach ( $group_fields as $group_name => $fields ) {
+					//note: if group_name is not in hidden groups then proceed with validation.
+					if ( ! in_array( $group_name, $hidden_groups ) && in_array( $name, $fields ) ) {
+						$result->invalidate( $tag, wpcf7_get_message( 'invalid_required' ) );
+						break;
+					}
 				}
 				return $result;
 			}
-
-			return $result;
 		}
 
 		// Check if we have files or if it's empty
@@ -891,12 +909,12 @@
 		// Create type pattern for anti script
 		$file_type_pattern = dnd_upload_cf7_filetypes( $supported_type );
 
-		// Get file extension
-        $extension = strtolower( pathinfo( sanitize_file_name( $file['name'] ), PATHINFO_EXTENSION ) );
-
         // Create file name
 		$filename = wp_basename( $file['name'] );
 		$filename = wpcf7_canonicalize( $filename, 'as-is' );
+
+		// Get file extension
+        $extension = strtolower( pathinfo( $filename, PATHINFO_EXTENSION ) );
 
         // Check unique name
         $filename = wp_unique_filename( $path['upload_dir'], $filename );
