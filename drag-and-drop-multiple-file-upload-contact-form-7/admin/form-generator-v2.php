@@ -122,7 +122,7 @@
 	<fieldset>
 		<legend id="<?php echo esc_attr( $tgg->ref( 'max-file-option-legend' ) ); ?>">
 			<?php
-				esc_html_e( 'Minimum File Upload', 'drag-and-drop-multiple-file-upload-contact-form-7' );
+				esc_html_e( 'Maximum File Upload', 'drag-and-drop-multiple-file-upload-contact-form-7' );
 			?>
 		</legend>
 		<label>

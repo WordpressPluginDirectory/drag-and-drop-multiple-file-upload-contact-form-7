@@ -254,9 +254,10 @@
 
 		// Add random folder.
 		if ( true === $dir ) {
-			$random_folder = dnd_cf7_get_unique_id();
-			if ( $random_folder ) {
-				$uploads_dir   = $uploads_dir .'/'. $random_folder;
+			$unique_id = dnd_cf7_get_unique_id();
+			if ( $unique_id ) {
+				$random_folder = preg_replace( '/[^a-zA-Z0-9_-]/', '', $unique_id );
+				$uploads_dir   = $uploads_dir .'/'. sanitize_file_name( $random_folder ); // Sanitize File Name Aug 2025
 			}
 		}
 
@@ -740,13 +741,10 @@
 
 			if ( is_null( $multiple_files ) && $tag->is_required() && $group_fields ) {
 				foreach ( $group_fields as $group_name => $fields ) {
-					//note: if group_name is not in hidden groups then proceed with validation.
-					if ( ! in_array( $group_name, $hidden_groups ) && in_array( $name, $fields ) ) {
-						$result->invalidate( $tag, wpcf7_get_message( 'invalid_required' ) );
-						break;
+					if ( in_array( $group_name, $hidden_groups, true ) && in_array( $name, $fields, true ) ) {
+						return $result; // [upload_field] is in hidden [group]
 					}
 				}
-				return $result;
 			}
 		}
 
@@ -1048,21 +1046,23 @@
 
 			// Validate path if it's match on the current folder
 			$unique_id      = dnd_cf7_get_unique_id();
-			$current_folder = dirname( $path );
-			$current_path   = $dir['upload_dir'] .'/'. $unique_id .'/'. wp_basename( $path );
+			$current_folder = trim( dirname( $path ) );
+			$file_name      = wp_basename( $path ); // added Aug 2025
+			$current_path   = $dir['upload_dir'] .'/'. sanitize_file_name( $unique_id ) .'/'. $file_name;
 
 			// Show an error
 			if ( 'yes' !== dnd_cf7_settings('drag_n_drop_mail_attachment') ) {
-				if ( ( $unique_id && $unique_id !== trim( $current_folder ) ) || ! file_exists( $current_path ) ) {
+				if ( ( $unique_id && $unique_id !== $current_folder ) || ! file_exists( $current_path ) || preg_match( '#\.\.[/\\\\]#', $path ) ) {
 					wp_send_json_error( 'Error: Unauthorized Request!' );
 				}
 			}
 
 			// Concatenate path and upload directory
-			$file_path = realpath( trailingslashit( $dir['upload_dir'] ) . trim( $path ) );
+			$path      = trailingslashit( $current_folder ) . sanitize_file_name( $file_name ); // fixed traversal attack. (Aug 2025)
+			$file_path = realpath( trailingslashit( $dir['upload_dir'] ) . $path );
 
 			// Check if is in the correct upload_dir
-			if ( ! preg_match("/". wpcf7_dnd_dir ."/i", $file_path ) ) {
+			if ( ! preg_match( '#(?:^|/)' . preg_quote( wpcf7_dnd_dir, '#' ) . '(/|$)#i', $file_path ) ) {
 				wp_send_json_error('It\'s not a valid upload directory');
 			}
 
@@ -1110,7 +1110,7 @@
 	// Add more validation for file extension
 	function dnd_cf7_validate_type( $extension, $supported_types ) {
 		$valid = true;
-		$extension = preg_replace( '/[^A-Za-z0-9,|]/', '', $extension );
+		$extension = preg_replace( '/[^A-Za-z0-9,|_]/', '', $extension );
 
 		// not allowed file types
 		$not_allowed = array( 'php', 'php3','php4','phtml','exe','script', 'app', 'asp', 'bas', 'bat', 'cer', 'cgi', 'chm', 'cmd', 'com', 'cpl', 'crt', 'csh', 'csr', 'dll', 'drv', 'fxp', 'flv', 'hlp', 'hta', 'htaccess', 'htm', 'htpasswd', 'inf', 'ins', 'isp', 'jar', 'js', 'jse', 'jsp', 'ksh', 'lnk', 'mdb', 'mde', 'mdt', 'mdw', 'msc', 'msi', 'msp', 'mst', 'ops', 'pcd', 'pif', 'pl', 'prg', 'ps1', 'ps2', 'py', 'rb', 'reg', 'scr', 'sct', 'sh', 'shb', 'shs', 'sys', 'swf', 'tmp', 'torrent', 'url', 'vb', 'vbe', 'vbs', 'vbscript', 'wsc', 'wsf', 'wsf', 'wsh' );
@@ -1383,9 +1383,18 @@
 		}
 		?>
 		<script type="text/javascript">
+			function dnd_cf7_generateUUIDv4() {
+				const bytes = new Uint8Array(16);
+				crypto.getRandomValues(bytes);
+				bytes[6] = (bytes[6] & 0x0f) | 0x40; // version 4
+				bytes[8] = (bytes[8] & 0x3f) | 0x80; // variant 10
+				const hex = Array.from(bytes, b => b.toString(16).padStart(2, "0")).join("");
+				return hex.replace(/^(.{8})(.{4})(.{4})(.{4})(.{12})$/, "$1-$2-$3-$4-$5");
+			}
+
 			document.addEventListener("DOMContentLoaded", function() {
 				if ( ! document.cookie.includes("wpcf7_guest_user_id")) {
-					document.cookie = "wpcf7_guest_user_id=" + crypto.randomUUID() + "; path=/; max-age=" + (12 * 3600) + "; samesite=Lax";
+					document.cookie = "wpcf7_guest_user_id=" + dnd_cf7_generateUUIDv4() + "; path=/; max-age=" + (12 * 3600) + "; samesite=Lax";
 				}
 			});
 		</script>
