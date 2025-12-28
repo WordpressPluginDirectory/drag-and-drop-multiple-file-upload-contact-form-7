@@ -3,8 +3,8 @@ Contributors: glenwpcoder, yordansoares
 Donate link : http://codedropz.com/donation
 Tags: drag and drop, contact form 7, ajax uploader, multiple file, upload
 Requires at least: 3.0.1
-Tested up to: 6.8
-Stable tag: 1.3.9.2
+Tested up to: 6.9
+Stable tag: 1.3.9.3
 Requires PHP: 5.2.4
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
@@ -93,11 +93,14 @@ You can get [PRO Version here](https://www.codedropz.com/purchase-plugin/)!
 
 ### Other Plugins You May Like
 
-* [Drag & Drop Multiple File Upload - WPForms](https://www.codedropz.com/drag-drop-file-uploader-wpforms/)
-An extension for **WPForms** - Transform your simple file upload into beautiful **"Drag & Drop Multiple File Upload"**.
+* [Easy File Upload & Approval](https://wordpress.org/plugins/easy-file-upload-approval/)
+**Easy File Upload & Approval** - A simple file management plugin that lets users effortlessly upload and submit files for review through a clean and simple drag-and-drop interface.
 
 * [Drag & Drop Multiple File Upload - WooCommerce](https://wordpress.org/plugins/drag-and-drop-multiple-file-upload-for-woocommerce/)
 An extension for **WooCommerce** - Transform your simple file upload into beautiful **"Drag & Drop Multiple File Upload"**.
+
+* [Drag & Drop Multiple File Upload - WPForms](https://www.codedropz.com/drag-drop-file-uploader-wpforms/)
+An extension for **WPForms** - Transform your simple file upload into beautiful **"Drag & Drop Multiple File Upload"**.
 
 == Frequently Asked Questions ==
 
@@ -178,6 +181,11 @@ To install this plugin see below:
 7. Remote Storage - Pro Features
 
 == Changelog ==
+
+= 1.3.9.3 =
+- Security: Fixed vulnerability issues reported by WordFence (reported by shark3y) - unauthorized modification of data due to a missing ownership check in the dnd_codedropz_upload_delete() function.
+- Security: Fixed an unauthenticated limited arbitrary file upload issue allowing .phar and .svg files when using blacklist mode with file types set to *. (by WordFence via andrea bocchetti)
+
 = 1.3.9.2 =
 - Fixed - File Upload required fields conflicts with Conditional Fields for CF7.
 - Fixed - Typo error in Cf7 field editor.
