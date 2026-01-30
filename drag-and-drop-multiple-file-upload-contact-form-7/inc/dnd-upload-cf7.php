@@ -16,6 +16,7 @@
 
 	add_action( 'wpcf7_init', 'dnd_cf7_upload_add_form_tag_file' );
 	add_action( 'wpcf7_enqueue_scripts', 'dnd_cf7_scripts' );
+	add_action( 'wpcf7_enqueue_scripts', 'dnd_cf7_cookie_scripts', 50 );
 
 	// Hook on plugins loaded
 	add_action('plugins_loaded','dnd_cf7_upload_plugins_loaded');
@@ -37,8 +38,8 @@
 	add_action('wpcf7_before_send_mail','dnd_cf7_before_send_mail', 30, 1);
 	add_action('wpcf7_mail_components','dnd_cf7_mail_components', 50, 2);
 
-	// Auto clean up dir/files
-	add_action('shutdown', 'dnd_cf7_auto_clean_dir', 20, 1 );
+	// Auto clean up dir/files - cron schedule.
+	add_action('dnd_cf7_daily_event', 'dnd_cf7_auto_clean_dir');
 
 	// Add row meta links
 	add_filter( 'plugin_row_meta', 'dnd_custom_plugin_row_meta', 10, 2 );
@@ -57,9 +58,6 @@
 
 	// Flamingo Hooks
 	add_action('before_delete_post', 'dnd_remove_uploaded_files');
-
-	// Generate uqique id/random
-	add_action( 'wp_footer', 'dnd_cf7_generate_cookie' );
 
     // Nonce
     function dnd_wpcf7_nonce_check() {
@@ -205,8 +203,8 @@
 				if( $field->basetype == 'mfile' && isset( $posted_data[$field_name] ) && ! empty( $posted_data[$field_name] ) ) {
 					if ( is_array( $posted_data ) ) {
 						foreach( $posted_data[$field_name] as $key => $file ) {
-							if ( $send_link || strpos( dirname($file), 'wpcf7-files' ) !== false ) {
-								//$file = wp_basename( $file ); // remove duplicate path "/12/file.jpg" to just "/file.jpg"
+							if ( strpos( dirname($file), 'wpcf7-files' ) !== false ) {
+								$file = wp_basename( $file ); // remove duplicate path "/12/file.jpg" to just "/file.jpg"
 							}
 							$posted_data[$field_name][$key] = trailingslashit( $uploads_dir['upload_url'] ) . $file;
 						}
@@ -293,9 +291,6 @@
 
 	// Clean up directory - From Contact Form 7
 	function dnd_cf7_auto_clean_dir( $dir_path = null ) {
-		if ( is_admin() ) {
-			return;
-		}
 
         // Disable auto delete
         if( dnd_cf7_settings('drag_n_drop_disable_auto_delete') == 'yes' || get_option( 'drag_n_drop_disable_auto_delete' ) == 'yes' ) {
@@ -588,6 +583,28 @@
 
 		// enque style
 		wp_enqueue_style( 'dnd-upload-cf7', plugins_url ('/assets/css/dnd-upload-cf7.css', dirname(__FILE__) ), '', $version );
+	}
+
+	// Add inline js for cookie script.
+	function dnd_cf7_cookie_scripts() {
+		wp_add_inline_script( 'codedropz-uploader',
+			"
+			function dnd_cf7_generateUUIDv4() {
+				const bytes = new Uint8Array(16);
+				crypto.getRandomValues(bytes);
+				bytes[6] = (bytes[6] & 0x0f) | 0x40; // version 4
+				bytes[8] = (bytes[8] & 0x3f) | 0x80; // variant 10
+				const hex = Array.from(bytes, b => b.toString(16).padStart(2, '0')).join('');
+				return hex.replace(/^(.{8})(.{4})(.{4})(.{4})(.{12})$/, '$1-$2-$3-$4-$5');
+			}
+
+			document.addEventListener('DOMContentLoaded', function() {
+				if ( ! document.cookie.includes('wpcf7_guest_user_id')) {
+					document.cookie = 'wpcf7_guest_user_id=' + dnd_cf7_generateUUIDv4() + '; path=/; max-age=' + (12 * 3600) + '; samesite=Lax';
+				}
+			});
+			"
+		);
 	}
 
 	// Generate tag
@@ -1170,7 +1187,7 @@
 				echo sprintf(
 					esc_html__( '🔥 %1$sUpgrade Now%2$s for Extra Features: Explore the %3$sPro Version%4$s Today!', 'drag-and-drop-multiple-file-upload-contact-form-7' ),
 					'<span style="color:#038d03;">','</span>',
-					'<a href="https://codedropz.com/purchase-plugin/" target="_blank">','</a>',
+					'<a href="https://www.codedropz.com/drag-drop-multiple-file-upload-for-contact-form-7/" target="_blank">','</a>',
 					);
 				echo ' | ';
 				echo sprintf(
@@ -1364,7 +1381,7 @@
 	// Add custom links
 	function dnd_custom_plugin_row_meta( $links, $file ) {
 		if ( strpos( $file, 'drag-n-drop-upload-cf7.php' ) !== false ) {
-			$new_links = array('pro-version' => '<a href="https://codedropz.com/purchase-plugin/" target="_blank" style="font-weight:bold; color:#f4a647;">Pro Version</a>');
+			$new_links = array('pro-version' => '<a href="https://www.codedropz.com/drag-drop-multiple-file-upload-for-contact-form-7/" target="_blank" style="font-weight:bold; color:#f4a647;">Pro Version</a>');
 			$links = array_merge( $links, $new_links );
 		}
 		return $links;
@@ -1406,6 +1423,17 @@
 		}
 
 		return $default_value;
+	}
+
+	function dnd_cf7_max_upload() {
+		$max    = wp_max_upload_size();
+		$max_mb = $max / 1024 / 1024;
+
+		if ( $max_mb > 1024 ) {
+			return round( $max_mb / 1024, 2 ) . ' GB';
+		}
+
+		return round( $max_mb, 2 ) . ' MB';
 	}
 
 	// Generate cookie (Cookie expiration 12 Hours)

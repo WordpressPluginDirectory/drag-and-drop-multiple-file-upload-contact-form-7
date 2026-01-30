@@ -244,11 +244,11 @@
                     // Process ajax upload
                     var xhr = new XMLHttpRequest();
 
-                    // Get progress bar element
-                    const progressBar = document.getElementById( progressBarID );
-                    const progressElement = progressBar.querySelector('.dnd-progress-bar');
-                    const detailsElement = progressBar.querySelector('.dnd-upload-details');
-                    const submitButton = form_handler.querySelector('input[type="submit"], button[type="submit"]');
+                    // Get progress bar element [changes 2026]
+                    let progressBar = document.getElementById( progressBarID );
+                    let progressElement = progressBar.querySelector('.dnd-progress-bar');
+                    let detailsElement = progressBar.querySelector('.dnd-upload-details');
+                    let submitButton = form_handler.querySelector('input[type="submit"], button[type="submit"]');
 
                     xhr.open(form_handler.getAttribute('method'), options.ajax_url);
                     xhr.onreadystatechange = function() {
